@@ -1,0 +1,7 @@
+
+*.aiff
+*.mp3
+*.mp4
+export/.DS_Store
+audio/.DS_Store
+.DS_Store
