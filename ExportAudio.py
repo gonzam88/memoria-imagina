@@ -20,8 +20,9 @@ with open(jsonFile, 'r') as file:
 
 
 # Create a say command for each phrase and export to a file
-speechVoice = "Princess"
-speechSpeed = "120"
+# speechVoice = "Princess"
+speechVoice = "Allison"
+speechSpeed = "190"
 
 for i in range(len(nostalgic_story)):
     phrase = nostalgic_story[i]["phrase"]
