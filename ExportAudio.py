@@ -26,7 +26,7 @@ speechSpeed = "120"
 for i in range(len(nostalgic_story)):
     phrase = nostalgic_story[i]["phrase"]
     tag = nostalgic_story[i]["tag"]
-    args = ["say", "-v", speechVoice, "-r", speechSpeed, phrase, "-o", f"audio/{i}.aiff"]
+    args = ["say", "-v", speechVoice, "-r", speechSpeed, phrase, "-o", f"{newFolder}/{i}.aiff"]
     # print(args)
     subprocess.run(args)
 
@@ -36,9 +36,11 @@ for i in range(len(nostalgic_story)):
     args = [
         "ffmpeg",
         "-i",
-        f"audio/{i}.aiff",
+        f"{newFolder}/{i}.aiff",
         "-acodec",
         "libmp3lame",
         f"{newFolder}/{i}.mp3",
     ]
+    subprocess.run(args)
+    args = ["rm", f"{newFolder}/{i}.aiff"]
     subprocess.run(args)
