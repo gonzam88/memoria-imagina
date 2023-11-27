@@ -6,10 +6,11 @@ import sys
 import os
 import moviepy.editor as mp
 import moviepy.audio.fx.all as afx
+from openai import OpenAI
 
 
 currDirectory = os.path.dirname(os.path.abspath(__file__))
-speechVoices = ["Princess", "Allison", "Victoria", "Samantha"]
+speechVoices = ["Allison", "Victoria", "Samantha"]
 
 # Load labels file
 labels = []
@@ -58,6 +59,9 @@ def CreateCompiledVideo(label):
 
     # Get a list of video files in the folder
     video_files = [file for file in os.listdir(videos_folder) if file.endswith(".mp4")]
+    if(len(video_files) == 0):
+        print("No video files found")
+        return
 
     # Create VideoFileClip objects for each video file
     video_clips = [mp.VideoFileClip(os.path.join(videos_folder, video)) for video in video_files]
@@ -81,36 +85,46 @@ def CreateCompiledVideo(label):
     # Write video duration information to a JSON file
     with open(json_output_path, 'w') as json_file:
         json.dump(video_info, json_file, indent=4)
-    # print(files)
-    # # Create a list of videos
-    # videos = []
-    # for i in range(len(files)):
-    #     videoFile = os.path.join(folder, files[i])
-    #     videos.append(videoFile)
-    # # Create a list of clips
-    # clips = []
-    # for i in range(len(files)):
-    #     # Get video clip
-    #     videoClip = mp.VideoFileClip(videos[i]).fx(afx.audio_normalize).fx(afx.volumex, 0.05)
-    #     # Get audio clip
-    #     audioClip = mp.AudioFileClip(audios[i])
-    #     # Mix original audio with new audio
-    #     new_audioclip = mp.CompositeAudioClip([videoClip.audio, audioClip])
-    #     # Set new audio
-    #     videoClip = videoClip.set_audio(new_audioclip)
-    #     # Set duration to shortest
-    #     audioDuration = audioClip.duration
-    #     videoDuration = videoClip.duration
-    #     shortestDuration = min(audioDuration, videoDuration)
-    #     videoClip = videoClip.subclip(0, shortestDuration)
-    #     # Add to array
-    #     clips.append(videoClip)
-    # Render
-    # composition = mp.concatenate_videoclips(clips, method='compose')
-    # composition.write_videofile(f"{currDirectory}/compiled_videos/{label}.mp4", codec='libx264', 
-    #                     audio_codec='aac', 
-    #                     temp_audiofile='temp-audio.m4a', 
-    #                     remove_temp=True)
+
+def CreateScript(label):
+    jsonFile = f"{currDirectory}/compiled_videos/{label}.json"
+    with open(jsonFile, 'r') as file:
+        videoData = json.load(file)
+    videoDuration = round(videoData["duration_seconds"]) - 3 # margen de 3 segundos
+
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    print(f"{label} script should be {videoDuration} seconds long")
+
+    chatgpt = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "You are a poetic assistant, experienced documentary filmmaker with some traits of Herzog and Wong Kar Wai."},
+        {"role": "user", "content": f"Write in first person about your childhood memory. be specific, extensive and honest with your feeling. The topic is {label}. Make the text so that it takes aprox {videoDuration} seconds when read aloud."}
+    ])
+    script = chatgpt.choices[0].message.content
+    scriptFile = os.path.join(currDirectory, "scripts", label + ".txt")
+    # Write the folders to a file
+    with open(scriptFile, 'w') as file:
+        file.write(script)
+
+def ComposeVideo(videoFile, audioFile, label):
+    print(f"**** Composing {label} ****")
+    # Compose Audio And Video
+    videoclip = mp.VideoFileClip(videoFile).fx(afx.audio_normalize).fx(afx.volumex, 0.024)
+    audioclip = mp.AudioFileClip(audioFile)
+    
+    # Define the delay duration (in seconds)
+    delay_duration = random.uniform(2, 4)
+    # Mix original audio with new audio
+    new_audioclip = mp.CompositeAudioClip([videoclip.audio, audioclip.set_start(delay_duration)])
+    # Set new audio
+    videoclip = videoclip.set_audio(new_audioclip)
+
+    videoclip.write_videofile(f"{currDirectory}/export/{label}.mp4", codec='libx264', 
+        audio_codec='aac', 
+        temp_audiofile='temp-audio.m4a', 
+        remove_temp=True)
+
 
 def CreateVideo():
     # Loop labels
@@ -122,19 +136,20 @@ def CreateVideo():
         if(not os.path.exists(compiledVideoFile)):
             print(labels[i] + ": compiled file does not exist. Creating")
             CreateCompiledVideo(labels[i])
-            continue
 
         # Check if script file exists
         scriptFile = os.path.join(currDirectory, "scripts", labels[i] + ".txt")
         if(not os.path.exists(scriptFile)):
-            print(labels[i] + ": script file does not exist. Skipping")
-            continue
+            print(labels[i] + ": script file does not exist. Creating")
+            CreateScript(labels[i])
         
         # Check if audio file exists
         audioFile = os.path.join(currDirectory, "audios", labels[i] + ".mp3")
         if(not os.path.exists(audioFile)):
             print(labels[i] + ": audio file does not exist. Creating")
             CreateAudioFile(labels[i])
-            continue
+        
+        ComposeVideo(compiledVideoFile, audioFile, labels[i])
+
 
 CreateVideo()

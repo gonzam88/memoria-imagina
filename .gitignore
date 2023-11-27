@@ -2,6 +2,9 @@
 *.aiff
 *.mp3
 *.mp4
+*.m4a
 export/.DS_Store
 audio/.DS_Store
 .DS_Store
+compiled_videos/*
+temp-audio.m4a
