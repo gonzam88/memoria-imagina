@@ -6,6 +6,7 @@ import sys
 import os
 import moviepy.editor as mp
 import moviepy.audio.fx.all as afx
+from chatgptkey import OPENAI_API_KEY
 from openai import OpenAI
 
 
@@ -66,8 +67,25 @@ def CreateCompiledVideo(label):
     # Create VideoFileClip objects for each video file
     video_clips = [mp.VideoFileClip(os.path.join(videos_folder, video)) for video in video_files]
 
+    # Find the maximum width and height among the video clips
+    max_width = max(clip.w for clip in video_clips)
+    max_height = max(clip.h for clip in video_clips)
+    # Calculate the aspect ratio of the largest clip
+    max_aspect_ratio = max_width / max_height
+    
+    # Function to resize a clip to the largest dimensions
+    def resize_to_largest(clip):
+        clip_aspect_ratio = clip.w / clip.h
+        if clip_aspect_ratio > max_aspect_ratio:
+            return clip.resize(width=max_width)
+        else:
+            return clip.resize(height=max_height)
+    
+    # Resize all clips to the dimensions of the largest one
+    video_clips_resized = [resize_to_largest(clip) for clip in video_clips]
+
     # Concatenate all video clips into a single video
-    composition = mp.concatenate_videoclips(video_clips, method='compose')
+    composition = mp.concatenate_videoclips(video_clips_resized, method='compose')
     composition = composition
     composition.write_videofile(f"{currDirectory}/compiled_videos/{label}.mp4", codec='libx264', 
         audio_codec='aac', 
@@ -91,7 +109,6 @@ def CreateScript(label):
     with open(jsonFile, 'r') as file:
         videoData = json.load(file)
     videoDuration = round(videoData["duration_seconds"]) - 3 # margen de 3 segundos
-
     client = OpenAI(api_key=OPENAI_API_KEY)
     print(f"{label} script should be {videoDuration} seconds long")
 
@@ -110,7 +127,7 @@ def CreateScript(label):
 def ComposeVideo(videoFile, audioFile, label):
     print(f"**** Composing {label} ****")
     # Compose Audio And Video
-    videoclip = mp.VideoFileClip(videoFile).fx(afx.audio_normalize).fx(afx.volumex, 0.024)
+    videoclip = mp.VideoFileClip(videoFile).fx(afx.audio_normalize).fx(afx.volumex, 0.034)
     audioclip = mp.AudioFileClip(audioFile)
     
     # Define the delay duration (in seconds)

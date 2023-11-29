@@ -8,3 +8,4 @@ audio/.DS_Store
 .DS_Store
 compiled_videos/*
 temp-audio.m4a
+chatgptkey.py
